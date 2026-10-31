@@ -1,15 +1,19 @@
 import json
+import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template
 
 BASE_DIR = Path(__file__).parent
+load_dotenv(BASE_DIR / ".env")
+
 app = Flask(__name__)
 
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", kakao_js_key=os.getenv("KAKAO_JS_KEY", ""))
 
 
 @app.route("/api/places")

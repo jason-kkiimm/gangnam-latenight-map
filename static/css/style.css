@@ -1,0 +1,17 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: "Malgun Gothic", sans-serif;
+}
+
+h1 {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 18px;
+  height: 20px;
+}
+
+#map {
+  width: 100%;
+  height: calc(100% - 44px);
+}
