@@ -50,6 +50,7 @@ DETAILS_FIELDS = "regularOpeningHours"
 CONFIRM_SIM, CONFIRM_DIST_M = 0.8, 50
 REVIEW_SIM_FAR, REVIEW_DIST_FAR_M = 0.8, 150
 REVIEW_SIM_NEAR = 0.6
+AUTO_MAX_DIST_M = 10  # 자동 승인: 이 거리 이내이고 이름 차이가 표기 수준일 때만
 NEAR_DIST_M = 20  # 이 안이면 유사도와 관계없이 검토 목록
 
 # 한 번 실행에서 보낼 수 있는 API 호출 상한(Text Search + Details). --max-calls로 바꾼다.
@@ -232,6 +233,35 @@ def fmt(h, m):
     return f"{h:02d}:{m:02d}"
 
 
+def split_periods(periods):
+    """period를 (개점 요일, 개점 분, 개점 요일 0시 기준 마감 경과 분) 목록으로 바꾼다.
+
+    구글이 24시간을 넘는 period 하나로 주는 경우(예: 일 09:00 ~ 토 21:00)는 하루 단위로 쪼갠다.
+    """
+    out = []
+    for p in periods:
+        o, c = p.get("open"), p.get("close")
+        if not o or not c:
+            continue
+        d = o["day"]
+        open_min = o.get("hour", 0) * 60 + o.get("minute", 0)
+        close_day_min = c.get("hour", 0) * 60 + c.get("minute", 0)
+        gap = (c["day"] - d) % 7
+        total = gap * 1440 + close_day_min - open_min
+        if total <= 1440 and not (gap == 0 and close_day_min <= open_min):
+            out.append((d, open_min, gap * 1440 + close_day_min))
+            continue
+        # 24시간 초과: 개점일은 다음 날 0시까지, 중간 날은 하루 종일, 마지막 날은 0시부터 마감까지
+        if gap == 0:  # 같은 요일에 닫는 시각이 더 이르면 일주일 가까이 이어진 것
+            gap = 7
+        out.append((d, open_min, 1440))
+        for k in range(1, gap):
+            out.append(((d + k) % 7, 0, 1440))
+        if close_day_min > 0:
+            out.append(((d + gap) % 7, 0, close_day_min))
+    return out
+
+
 def analyze_hours(hours):
     """regularOpeningHours -> (is_24h, late_night, closes_at)."""
     if not hours or not hours.get("periods"):
@@ -246,14 +276,7 @@ def analyze_hours(hours):
 
     # 요일별로 가장 늦은 마감을 구한다 (분 단위, 개점 요일 0시 기준 경과 분)
     latest = {}  # day index -> (close_elapsed_min, open_min)
-    for p in periods:
-        o, c = p.get("open"), p.get("close")
-        if not o or not c:
-            continue
-        d = o["day"]
-        open_min = o.get("hour", 0) * 60 + o.get("minute", 0)
-        day_gap = (c["day"] - d) % 7
-        close_min = day_gap * 1440 + c.get("hour", 0) * 60 + c.get("minute", 0)
+    for d, open_min, close_min in split_periods(periods):
         if d not in latest or close_min > latest[d][0]:
             latest[d] = (close_min, open_min)
 
@@ -324,10 +347,16 @@ def apply_to_places(cache):
         rec = cache.get(p["id"])
         if not rec:
             continue
-        if rec["status"] == "rejected":
-            continue  # 거절된 매칭은 반영하지 않는다
-        if rec["status"] == "review" and not rec.get("approved"):
-            continue  # 검토 대기: 사람이 approved를 true로 바꾸기 전에는 반영하지 않는다
+        pending = (
+            rec["status"] == "rejected"  # 거절된 매칭
+            or (rec["status"] == "review" and not rec.get("approved"))  # 검토 대기
+            or (rec.get("name_diff") and not rec.get("name_diff_checked"))  # 이름 차이 미확인
+        )
+        if pending:
+            # 사람이 승인하기 전에는 구글 값을 쓰지 않는다 (이전에 반영된 값도 되돌린다)
+            p["is_24h"], p["late_night"], p["closes_at"] = UNKNOWN, UNKNOWN, None
+            p.pop("google_place_id", None)
+            continue
         is_24h, late, closes = analyze_hours(rec.get("regularOpeningHours"))
         p["is_24h"], p["late_night"], p["closes_at"] = is_24h, late, closes
         if rec.get("google_place_id"):
@@ -403,6 +432,42 @@ def write_review_list(scope, cache):
     return items
 
 
+def loose_name(name):
+    """띄어쓰기·지점명·기호(&/AND)·까페/카페 차이를 없앤 이름."""
+    n = normalize(name).replace("까페", "카페").replace("(주)", "")
+    return re.sub(r"and", "", n)
+
+
+def auto_approve(cache, hold_ids):
+    """거리 AUTO_MAX_DIST_M 이내이고 이름이 표기 차이뿐이면 승인한다. API 호출 없음.
+
+    영업시간을 아직 받지 않은 항목(needs_hours)은 승인하려면 호출이 필요해서 건너뛴다.
+    돌려주는 값: (승인한 id 목록, {id: 건너뛴 이유})
+    """
+    approved, skipped = [], {}
+    for pid, rec in cache.items():
+        flagged = rec.get("name_diff") and rec["status"] in ("ok", "no_hours")
+        if not (flagged or (rec["status"] == "review" and not rec.get("approved"))):
+            continue
+        if pid in hold_ids:
+            skipped[pid] = "보류 지정"
+        elif rec.get("match_distance_m") is None or rec["match_distance_m"] > AUTO_MAX_DIST_M:
+            skipped[pid] = "거리 초과"
+        elif loose_name(rec["kakao_name"]) != loose_name(rec.get("google_name") or ""):
+            skipped[pid] = "상호명 다름"
+        elif rec.get("needs_hours"):
+            skipped[pid] = "영업시간 미조회"
+        else:
+            if flagged:
+                rec.pop("name_diff")
+                rec["name_diff_checked"] = True
+            else:
+                rec["approved"] = True
+            rec["auto_approved"] = True
+            approved.append(pid)
+    return approved, skipped
+
+
 def reject(cache, ids):
     for pid in ids:
         rec = cache.get(pid)
@@ -458,6 +523,8 @@ def main():
     ap.add_argument("--max-calls", type=int, default=DEFAULT_MAX_CALLS, help="이번 실행의 API 호출 상한")
     ap.add_argument("--approve", nargs="+", metavar="KAKAO_ID", help="검토 대기 매칭을 승인 (영업시간이 없으면 1건만 조회)")
     ap.add_argument("--reject", nargs="+", metavar="KAKAO_ID", help="검토 대기 매칭을 거절 (다른 가게로 처리, 조회 없음)")
+    ap.add_argument("--auto-approve", action="store_true", help="거리 10m 이내이고 이름 차이가 표기 수준인 검토 건을 승인 (조회 없음)")
+    ap.add_argument("--hold", nargs="+", default=[], metavar="KAKAO_ID", help="--auto-approve에서 제외할 id")
     ap.add_argument("--apply", action="store_true", help="캐시 결과를 places.json에 반영")
     args = ap.parse_args()
 
@@ -481,7 +548,13 @@ def main():
         todo = [s for s in todo if s["id"] in retry_ids]
     print(f"범위 {len(scope)}개 / 이미 조회 {len(scope) - len(todo)}개 / 남음 {len(todo)}개")
 
-    if args.approve or args.reject:
+    if args.approve or args.reject or args.auto_approve:
+        if args.auto_approve:
+            done, skipped = auto_approve(cache, set(args.hold))
+            reasons = {}
+            for r in skipped.values():
+                reasons[r] = reasons.get(r, 0) + 1
+            print(f"자동 승인 {len(done)}건 / 확인 필요로 남김 {len(skipped)}건 {reasons}")
         if args.reject:
             reject(cache, args.reject)
         if args.approve:
