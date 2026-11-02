@@ -418,6 +418,11 @@ def reject(cache, ids):
 def approve(cache, ids, max_calls):
     for pid in ids:
         rec = cache.get(pid)
+        if rec and rec.get("name_diff") and rec["status"] in ("ok", "no_hours"):
+            rec.pop("name_diff")  # 이름 차이를 사람이 확인하고 같은 가게로 승인
+            rec["name_diff_checked"] = True
+            print(f"  승인(이름 차이 확인): {rec['kakao_name']} -> {rec.get('google_name')}")
+            continue
         if not rec or rec["status"] != "review":
             print(f"  ! {pid}: 검토 대기 항목이 아님")
             continue
