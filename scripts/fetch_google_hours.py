@@ -103,6 +103,12 @@ def name_similarity(a, b):
     return ratio
 
 
+def name_differs(a, b):
+    """지점명을 뺀 이름이 서로 포함 관계도 아니면 핵심 단어가 다른 것 (스시반주헌 vs 스시산원 반주헌)."""
+    na, nb = normalize(a), normalize(b)
+    return bool(na and nb) and not (na == nb or na in nb or nb in na)
+
+
 def grade(dist, sim):
     """'confirmed' / 'review' / None"""
     if sim >= CONFIRM_SIM and dist <= CONFIRM_DIST_M:
@@ -199,6 +205,8 @@ def lookup(place):
         rec["status"] = "no_match"
         return rec
     c, dist, sim, level = match
+    if level == "confirmed" and name_differs(place["name"], c.get("displayName", {}).get("text", "")):
+        rec["name_diff"] = True  # 확정이지만 핵심 단어가 달라 사람이 확인해야 한다
     rec.update(
         google_place_id=c["id"],
         google_name=c.get("displayName", {}).get("text"),
@@ -353,6 +361,8 @@ def reclassify_cache(cache):
         if level is None:
             new = "review"  # 새 기준으로는 매칭이 약하지만 이미 받은 값이라 검토로 넘긴다
         rec["match_similarity"], rec["match_grade"] = round(sim, 2), level
+        if level == "confirmed" and name_differs(rec["kakao_name"], rec["google_name"]) and not rec.get("name_diff_checked"):
+            rec["name_diff"] = True
         if rec["status"] != new:
             rec["status"] = new
             moved += 1
@@ -364,7 +374,8 @@ def write_review_list(scope, cache):
     names = {s["id"]: s for s in scope}
     items = []
     for pid, rec in cache.items():
-        if rec["status"] not in ("review", "no_match", "no_hours", "not_operational"):
+        flagged = bool(rec.get("name_diff")) and rec["status"] in ("ok", "no_hours")
+        if rec["status"] not in ("review", "no_match", "no_hours", "not_operational") and not flagged:
             continue
         if rec["status"] == "review" and rec.get("approved"):
             continue
@@ -372,20 +383,21 @@ def write_review_list(scope, cache):
         items.append({
             "id": pid,
             "kakao_name": rec["kakao_name"],
-            "status": rec["status"],
+            "status": "confirmed_name_diff" if flagged and rec["status"] == "ok" else rec["status"],
+            "note": "확정(이름 차이 확인 필요): 이미 반영 대상. 다른 가게면 --reject" if flagged else None,
             "google_name": rec.get("google_name"),
             "dist_m": rec.get("match_distance_m"),
             "similarity": rec.get("match_similarity"),
             "google_place_id": rec.get("google_place_id"),
             "if_approved": {"is_24h": is_24h, "late_night": late, "closes_at": closes}
-            if rec["status"] == "review" else None,
+            if rec["status"] == "review" or flagged else None,
             "other_candidates": [
                 f'{c.get("name")} ({c.get("dist_m")}m, 유사도 {c.get("sim")})'
                 for c in rec.get("candidates", [])
             ] if rec["status"] == "no_match" else None,
             "scope_reason": names.get(pid, {}).get("reason"),
         })
-    order = {"review": 0, "no_match": 1, "no_hours": 2, "not_operational": 3}
+    order = {"confirmed_name_diff": 0, "review": 0, "no_match": 1, "no_hours": 2, "not_operational": 3}
     items.sort(key=lambda x: order[x["status"]])
     save_json(REVIEW_PATH, items)
     return items
@@ -394,7 +406,8 @@ def write_review_list(scope, cache):
 def reject(cache, ids):
     for pid in ids:
         rec = cache.get(pid)
-        if not rec or rec["status"] != "review":
+        flagged = rec is not None and rec.get("name_diff") and rec["status"] in ("ok", "no_hours")
+        if not rec or (rec["status"] != "review" and not flagged):
             print(f"  ! {pid}: 검토 대기 항목이 아님")
             continue
         rec["status"] = "rejected"  # 다른 가게로 확정. 값은 확인 필요로 남는다
