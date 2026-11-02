@@ -227,11 +227,16 @@
 
 | 항목 | 처리 |
 |---|---|
-| `data/places.json`, `data/scope.json` | git에서 삭제하고 `.gitignore`에 추가함(2026-11-03). 로컬 파일은 남아 있음 |
-| `data/raw/`(구글 조회 캐시) | 이미 `.gitignore`. 약관상 저장이 문제이므로 삭제 여부는 사용자가 결정 |
-| `scripts/collect_places.py`, `select_scope.py`, `fetch_google_hours.py` | 새 구조에서는 쓰지 않음. 삭제할지 기록용으로 둘지 결정 필요 |
+| `data/places.json`, `data/scope.json` | git에서 삭제하고 `.gitignore`에 추가함(2026-11-03). 로컬 파일도 삭제함(2026-11-03). 단, git 이력에는 남아 있음 → 10-9 |
+| `data/raw/`(구글 조회 캐시) | 삭제함(2026-11-03). 약관상 저장이 문제이기 때문 |
+| `scripts/collect_places.py`, `select_scope.py`, `fetch_google_hours.py` | `archive/`로 옮기고(2026-11-03) 각 파일 맨 위에 "약관 문제로 더 이상 실행하지 않음(2026-11-03)"을 적었다. 이유: 카카오·구글 API 결과를 저장하는 스크립트라서 두 서비스의 정책에 맞지 않기 때문이다. 기록용으로만 둔다 |
 | 현재 카카오 지도 화면(`/api/places`, `static/js/map.js`) | 새 구조에서 구글 지도 화면으로 교체. `/api/places`는 `places.json`이 없으면 동작하지 않는다 |
 | 카카오 API 키(JS·REST) | 새 구조에서는 쓰지 않음(링크만 사용) |
+
+### 10-6-1. 저장소 상태 (2026-11-03)
+
+- 저장소는 **비공개**로 전환했다. 공개 기간에 이미 받아 간 복사본(clone, fork)은 되돌릴 수 없다.
+- `data/places.json`, `data/scope.json`은 이전 커밋에 남아 있다. 이력 정리는 10-9 순서로 **내일(2026-11-04)** 한다. 오늘은 실행하지 않는다.
 
 ### 10-7. 마감 후 확장 과제
 
@@ -245,3 +250,78 @@
 1. 위 10-3의 확인 항목을 조사한다. (API 호출 없이 문서·약관으로)
 2. 이 계획과 비용을 사용자가 확인하고, 필요한 부분을 고친다.
 3. 승인 뒤 구현한다.
+
+### 10-9. git 이력에서 두 파일 지우기 (내일 실행. 오늘은 실행하지 않는다)
+
+목표: **커밋 기록(메시지·작성자·날짜·순서)은 그대로 두고**, 이력 전체에서 `data/places.json`과 `data/scope.json`만 지운다. 커밋 해시는 모두 바뀐다. 아래 명령은 PowerShell 기준이고, 경로는 예시다.
+
+**주의**
+- 되돌릴 수 없는 작업(강제 푸시)이 들어 있다. 반드시 1번 백업이 끝나고 검증된 다음에 시작한다.
+- 이력이 바뀌므로 다른 PC·다른 작업 폴더에 같은 저장소가 있으면 모두 버리고 새로 받아야 한다. 있는지 먼저 확인한다.
+- `.env`는 깃에 없으므로 이력 정리와 상관없다. 그래도 정리 전에 한 번 복사해 둔다.
+
+**1단계: 준비와 백업**
+1. 작업 중인 변경을 모두 커밋·푸시하고 `git status`가 깨끗한지 확인한다.
+2. `.env`를 저장소 밖에 복사해 둔다.
+3. 원격 저장소 전체를 백업한다.
+   ```
+   git clone --mirror https://github.com/jason-kkiimm/gangnam-latenight-map.git C:\dev-backup\gangnam-latenight-map.git
+   git -C C:\dev-backup\gangnam-latenight-map.git bundle create C:\dev-backup\gangnam-latenight-map.bundle --all
+   git bundle verify C:\dev-backup\gangnam-latenight-map.bundle
+   ```
+4. 기준값을 적어 둔다(나중에 비교용).
+   ```
+   git -C C:\dev-backup\gangnam-latenight-map.git rev-list --count --all     # 커밋 수
+   git -C C:\dev-backup\gangnam-latenight-map.git rev-parse "main^{tree}"     # 최신 트리 해시
+   git -C C:\dev-backup\gangnam-latenight-map.git branch -a ; git -C C:\dev-backup\gangnam-latenight-map.git tag   # 브랜치·태그
+   ```
+5. 이 백업에는 지우려는 두 파일이 들어 있다. 정리가 끝나고 문제없음을 확인한 뒤 백업을 삭제한다(그동안은 비공개 위치에만 둔다).
+
+**2단계: 새로 받은 사본에서 이력 다시 쓰기**
+1. 도구를 설치한다. `pip install git-filter-repo`, 그다음 `git filter-repo --version`으로 확인.
+2. 작업 중인 폴더가 아니라 **새 폴더에 새로 받는다**(filter-repo는 새 clone에서만 동작한다).
+   ```
+   git clone https://github.com/jason-kkiimm/gangnam-latenight-map.git C:\dev\gangnam-rewrite
+   cd C:\dev\gangnam-rewrite
+   ```
+3. 두 파일만 이력에서 뺀다. 두 파일만 바꾼 커밋도 **지우지 않고 남기도록** `--prune-empty never`를 붙인다.
+   ```
+   git filter-repo --invert-paths --path data/places.json --path data/scope.json --prune-empty never
+   ```
+
+**3단계: 푸시 전 검증 (모두 통과해야 다음으로)**
+- `git log --all --oneline -- data/places.json data/scope.json` → 출력이 비어 있어야 한다.
+- `git rev-list --count --all` → 1단계 4번의 커밋 수와 같아야 한다(커밋이 사라지지 않았다는 뜻).
+- `git rev-parse "main^{tree}"` → 1단계 4번의 트리 해시와 같아야 한다. 최신 상태에서는 두 파일이 이미 없으므로 같아야 하고, 다르면 다른 것이 바뀐 것이니 중단한다.
+- `git log --format="%h %an %ad %s" | more` → 메시지·작성자·날짜가 이전과 같은지 눈으로 확인.
+- 이전 해시와 새 해시는 `.git/filter-repo/commit-map`에서 대응표를 볼 수 있다.
+
+**4단계: 원격에 반영**
+1. filter-repo는 원격(`origin`)을 지우므로 다시 연결한다.
+   ```
+   git remote add origin https://github.com/jason-kkiimm/gangnam-latenight-map.git
+   ```
+2. 강제 푸시한다. 더 안전한 `--force-with-lease`를 쓴다. 브랜치·태그가 더 있으면 같이 올린다.
+   ```
+   git push --force-with-lease origin main
+   git push --force --tags origin   # 태그가 있을 때만
+   ```
+3. GitHub 쪽 확인: 저장소 페이지에서 이전 커밋 목록을 열어 두 파일이 없는지 본다. 이전 해시 주소는 한동안 열릴 수 있다. 완전히 없애려면 GitHub 지원에 캐시된 보기·PR 참조 정리를 요청해야 할 수 있다. 열린 PR이 있으면 같이 정리한다.
+
+**5단계: 로컬 정리**
+1. 기존 작업 폴더(`C:\dev\gangnam-latenight-map`)는 이전 이력을 가지고 있으므로 쓰지 않는다. 이름을 바꿔 두거나 지우고, `C:\dev\gangnam-rewrite`를 기존 이름으로 바꾸거나 새로 clone한다.
+2. 복사해 둔 `.env`를 새 폴더에 넣는다. `.venv`는 새로 만든다.
+3. 다른 PC·폴더의 이전 clone은 모두 지우고 새로 받는다.
+
+**6단계: 문서 정리**
+1. `docs/devlog.md`에 이력 정리 결과를 새 항목으로 적는다. 정리 날짜, 커밋 수 비교, 트리 해시 비교 결과, 해시가 바뀐 사실.
+2. `docs/devlog.md` #11이 적은 이전 커밋 해시(`0461222`, `958b154`, `6850431`, `2639a37`, `2476217` 등)는 새 해시로 바꾸거나 "정리 전 해시"라고 표시한다.
+3. 백업(`C:\dev-backup`)은 문제없음을 확인한 뒤 삭제한다.
+
+**문제가 생기면 되돌리기**
+- 1단계 백업에서 복구한다: `git -C C:\dev-backup\gangnam-latenight-map.git push --force --mirror https://github.com/jason-kkiimm/gangnam-latenight-map.git`. 번들(`.bundle`)에서도 복원할 수 있다.
+- 3단계 검증에서 하나라도 어긋나면 4단계(강제 푸시)로 가지 않는다.
+
+**한계**
+- 저장소가 공개였던 동안 누군가 받아 간 복사본에는 두 파일이 남는다. 이력 정리로 지울 수 없다.
+- GitHub 쪽 캐시와 서드파티 보관본도 마찬가지다.
