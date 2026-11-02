@@ -4,3 +4,5 @@ venv/
 .venv/
 .env
 data/raw/
+data/places.json
+data/scope.json
