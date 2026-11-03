@@ -6,6 +6,7 @@ let map = null;
 let markers = [];
 let infoWindow = null;
 let busy = false;
+let last = null; // 마지막으로 받은 결과 { places, origin, note }. 화면에서만 쓰고 저장하지 않는다.
 
 function initMap() {
   map = new google.maps.Map($("map"), {
@@ -135,6 +136,28 @@ function lockButtons(seconds) {
   setTimeout(() => buttons.forEach((b) => (b.disabled = false)), seconds * 1000);
 }
 
+// 이미 받은 결과를 다시 그린다. "심야만 보기"는 서버를 다시 부르지 않고 여기서만 거른다.
+function showLast() {
+  if (!last) return;
+  const lateOnly = $("late-only").checked;
+  const shown = lateOnly ? last.places.filter((p) => p.late_night === true) : last.places;
+  render(shown, last.origin);
+  const total = last.places.length;
+  if (!total) {
+    setStatus(`${last.note} 반경 1km 안에 지금 영업 중인 곳이 없습니다.`);
+  } else if (lateOnly) {
+    setStatus(
+      shown.length
+        ? `${last.note} 지금 영업 중 ${total}곳 중 심야(자정을 넘겨 닫는 곳) ${shown.length}곳, 가까운 순`
+        : `${last.note} 지금 영업 중 ${total}곳 중 심야인 곳이 없습니다. "심야만 보기"를 끄면 전체가 보입니다.`
+    );
+  } else {
+    setStatus(`${last.note} 반경 1km 안 지금 영업 중 ${total}곳, 가까운 순`);
+  }
+}
+
+$("late-only").addEventListener("change", showLast);
+
 async function search(origin, note) {
   if (busy) return;
   busy = true;
@@ -148,12 +171,8 @@ async function search(origin, note) {
       if (data.retry_after) lockButtons(Math.ceil(data.retry_after));
       return;
     }
-    render(data.places, origin);
-    setStatus(
-      data.count
-        ? `${note} 반경 1km 안 지금 영업 중 ${data.count}곳, 가까운 순`
-        : `${note} 반경 1km 안에 지금 영업 중인 곳이 없습니다.`
-    );
+    last = { places: data.places, origin, note };
+    showLast();
     lockButtons(cooldown);
   } catch (e) {
     setStatus("서버에 연결하지 못했습니다.");
