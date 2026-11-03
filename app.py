@@ -97,7 +97,7 @@ def api_nearby():
 
     mode = places_mode()
     if mode == "fake":
-        raw, now = nearby.fake_search(), nearby.fake_now()
+        raw, now = nearby.fake_search(place_type), nearby.fake_now()
     else:
         key = os.getenv("GOOGLE_PLACES_KEY", "")
         if not key:

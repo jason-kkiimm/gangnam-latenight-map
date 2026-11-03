@@ -96,15 +96,16 @@ def _daily_periods(open_hm, close_hm):
     return periods
 
 
-def _fake_places():
+def _fake_places(place_type=None):
     gl, gn = GANGNAM_STATION
+    # (id, 종류, 이름, 위도 차, 경도 차, 영업시간). 종류별 3개씩.
     items = [
-        ("fake-1", "(가짜) 24시간 카페", 0.0010, 0.0, {"periods": [{"open": {"day": 0, "hour": 0, "minute": 0}}]}),
-        ("fake-2", "(가짜) 정각 자정 마감 식당", 0.0, 0.0030, {"periods": _daily_periods((11, 0), (0, 0))}),
-        ("fake-3", "(가짜) 새벽 2시 마감 식당", -0.0040, 0.0, {"periods": _daily_periods((18, 0), (2, 0))}),
-        ("fake-4", "(가짜) 밤 11시 마감 카페", 0.0, -0.0060, {"periods": _daily_periods((9, 0), (23, 0))}),
-        ("fake-5", "(가짜) 밤 11시 30분 마감 식당", 0.0075, 0.0, {"periods": _daily_periods((10, 0), (23, 30))}),
-        ("fake-6", "(가짜) 1km 밖 새벽 2시 마감 식당", -0.0120, 0.0, {"periods": _daily_periods((18, 0), (2, 0))}),
+        ("fake-1", "restaurant", "(가짜) 정각 자정 마감 식당", 0.0, 0.0030, {"periods": _daily_periods((11, 0), (0, 0))}),
+        ("fake-2", "restaurant", "(가짜) 밤 11시 30분 마감 식당", 0.0075, 0.0, {"periods": _daily_periods((10, 0), (23, 30))}),
+        ("fake-3", "restaurant", "(가짜) 1km 밖 새벽 2시 마감 식당", -0.0120, 0.0, {"periods": _daily_periods((18, 0), (2, 0))}),
+        ("fake-4", "cafe", "(가짜) 24시간 카페", 0.0010, 0.0, {"periods": [{"open": {"day": 0, "hour": 0, "minute": 0}}]}),
+        ("fake-5", "cafe", "(가짜) 새벽 2시 마감 카페", -0.0040, 0.0, {"periods": _daily_periods((18, 0), (2, 0))}),
+        ("fake-6", "cafe", "(가짜) 밤 11시 마감 카페", 0.0, -0.0060, {"periods": _daily_periods((9, 0), (23, 0))}),
     ]
     return [
         {
@@ -115,7 +116,8 @@ def _fake_places():
             "googleMapsUri": "https://www.google.com/maps/search/?api=1&query=%d,%d" % (gl, gn),
             "currentOpeningHours": hours,
         }
-        for pid, name, dlat, dlng, hours in items
+        for pid, _type, name, dlat, dlng, hours in items
+        if place_type is None or _type == place_type
     ]
 
 
@@ -192,5 +194,5 @@ def shape_results(raw_places, lat, lng, now):
     return out
 
 
-def fake_search():
-    return _fake_places()
+def fake_search(place_type=None):
+    return _fake_places(place_type)

@@ -16,6 +16,6 @@ python app.py
 
 ## 모드
 
-`.env`의 `PLACES_MODE`로 정합니다. **기본값은 `fake`** 이고 이때는 구글을 호출하지 않고 가짜 가게 6개를 돌려줍니다. 진짜 조회는 `PLACES_MODE=real`로 바꾸고 `GOOGLE_PLACES_KEY`를 넣어야 합니다. 지도는 `GOOGLE_MAPS_BROWSER_KEY`가 있을 때만 뜨고, 없으면 목록만 보입니다.
+`.env`의 `PLACES_MODE`로 정합니다. **기본값은 `fake`** 이고 이때는 구글을 호출하지 않고 가짜 가게를 음식점 3개·카페 3개(선택한 종류만)로 돌려줍니다. 진짜 조회는 `PLACES_MODE=real`로 바꾸고 `GOOGLE_PLACES_KEY`를 넣어야 합니다. 지도는 `GOOGLE_MAPS_BROWSER_KEY`가 있을 때만 뜨고, 없으면 목록만 보입니다.
 
 진짜 모드의 안전장치: 서버 전체 하루 30건 상한, 같은 사용자 10초 쿨다운. 호출 횟수만 `usage_counter.json`에 세고 구글 데이터는 저장하지 않습니다.
