@@ -7,9 +7,30 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <h1>강남 24시간 식음료 가게 지도</h1>
-  <div id="map"></div>
-  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey={{ kakao_js_key }}&autoload=false"></script>
+  <header>
+    <h1>지금 영업 중인 곳</h1>
+    <div class="controls">
+      <label><input type="radio" name="type" value="restaurant" checked> 음식점</label>
+      <label><input type="radio" name="type" value="cafe"> 카페</label>
+      <button id="btn-here" type="button">내 위치로 찾기</button>
+      <button id="btn-station" type="button">강남역 기준으로 보기</button>
+    </div>
+    <p id="status" role="status"></p>
+  </header>
+  <main>
+    <div id="map"></div>
+    <ul id="list"></ul>
+  </main>
+  <footer>
+    {% if mode == 'fake' %}<strong>가짜 데이터 모드</strong>: 구글을 호출하지 않고 예시 가게를 보여줍니다(시각은 밤 10시 30분으로 가정). ·{% endif %}
+    구글 기준이며 실제와 다를 수 있습니다. 장소 정보와 지도는 Google Maps 제공.
+  </footer>
+  <script>
+    window.APP = {{ {"station": station, "cooldown": cooldown, "mode": mode} | tojson }};
+  </script>
   <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+  {% if maps_key %}
+  <script async src="https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&callback=initMap&loading=async"></script>
+  {% endif %}
 </body>
 </html>

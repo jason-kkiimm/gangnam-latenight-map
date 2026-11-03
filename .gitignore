@@ -6,3 +6,4 @@ venv/
 data/raw/
 data/places.json
 data/scope.json
+usage_counter.json
