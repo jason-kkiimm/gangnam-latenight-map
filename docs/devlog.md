@@ -401,7 +401,7 @@
   - 폐기된 작업량: 구글 조회 약 1,570건(시험 40 + 승인 조회 4 + 전체 1,531 등), 캐시 900건, 승인 8건·확인 필요 151건 처리.
   - 새 구조 예상: 버튼 1회 = Text Search 2호출. 하루 5회(개인 사용)면 월 약 300호출로 무료 한도 안(자세한 표는 plan.md 10-4).
 - **아직 남은 문제**
-  - **git 이력에 두 파일이 남아 있다.** 공개 저장소라서 `git rm`은 이후 커밋에서만 뺀다. 이전 커밋(`0461222`, `958b154`, `6850431`, `2639a37`, `2476217` 등)에는 내용이 그대로 있다. 이력에서 지우려면 이력 재작성과 강제 푸시가 필요해서 하지 않았고, 할지는 사용자가 정한다.
+  - **git 이력에 두 파일이 남아 있다.** 공개 저장소라서 `git rm`은 이후 커밋에서만 뺀다. 이전 커밋(정리 전 해시 `0461222`, `958b154`, `6850431`, `2639a37`, `2476217` 등)에는 내용이 그대로 있다. 이력에서 지우려면 이력 재작성과 강제 푸시가 필요해서 하지 않았고, 할지는 사용자가 정한다. → 2026-11-03 #13에서 정리함. 해당 커밋의 새 해시는 순서대로 `c3f9b69`, `cf92ea5`, `bec4378`, `96443f1`, `e99cf53`.
   - **devlog 자체에도 가게별 영업시간·이름 예시가 들어 있다**(#1~#10). 저장 금지 범위에 들어가는지 확인하고, 필요하면 일반화해서 고친다.
   - 로컬 `data/raw/`, `data/places.json`, `data/scope.json` 파일을 계속 둘지 지울지 결정 필요.
   - 이 날짜의 약관 해석은 사용자가 확인한 것이다. 구현 전에 원문 조항과 확인 날짜를 devlog에 적는다.
@@ -441,12 +441,64 @@
 
 ---
 
+## 2026-11-03 #13. git 이력에서 두 파일 지우기 (plan.md 10-9 실행)
+
+- **날짜**: 2026-11-03 (#12에서는 내일 하기로 했으나, 사용자가 같은 날 진행하라고 요청)
+- **발견한 문제**: 저장소가 공개였던 동안 올라간 `data/places.json`, `data/scope.json`이 이전 커밋 6개에 남아 있었다.
+- **내가 내린 판단과 요청**: 커밋 기록(메시지·작성자·날짜·순서)은 그대로 두고 두 파일만 이력에서 지운다. 강제 푸시 전에는 검증 결과를 보고 사용자가 먼저 승인한다. API는 호출하지 않는다.
+- **해결 방법**
+  - 백업: `C:\dev-backup`에 미러 clone, 번들(`verify` 통과), `.env` 복사.
+  - 새 clone(`C:\dev\gangnam-rewrite`)에서 `git filter-repo --invert-paths --path data/places.json --path data/scope.json --prune-empty never` 실행.
+  - 검증 통과 후 `git push --force-with-lease=main:<이전 해시>`로 원격 `main`을 `66f8f3a`에서 `b3bbf89`로 교체.
+- **결과 숫자 (정리 전 → 후)**
+  - 두 파일이 남은 커밋: 6개 → 0개
+  - 커밋 수: 20 → 20
+  - 최신 트리 해시: `1c473b652e57a63d68b31447870cf55ca05cbb54` → 동일 (두 파일은 이미 최신에서 빠져 있었으므로 같아야 정상)
+  - 작성자·이메일·작성일·커밋일·메시지 20개: 모두 동일
+  - 커밋 해시: 20개 전부 바뀜
+- **커밋 해시 대응표 (정리 전 → 후)**
+
+| 정리 전 | 정리 후 | 날짜 | 메시지 |
+|---|---|---|---|
+| `e15f866` | `bd4f4b6` | 2026-10-31 | Initial commit |
+| `ef581fb` | `b1a51c5` | 2026-10-31 | Update README.md |
+| `0461222` | `c3f9b69` | 2026-10-31 | Add basic project folder structure |
+| `f3144e3` | `1596b61` | 2026-10-31 | Set up Python environment and Flask server |
+| `88a1dbb` | `511a904` | 2026-10-31 | Connect Kakao Map to main page |
+| `958b154` | `cf92ea5` | 2026-10-31 | Collect Gangnam places from Kakao API |
+| `a49d7ea` | `fdeba65` | 2026-10-31 | Add data enrichment plan |
+| `6850431` | `bec4378` | 2026-10-31 | Add data enrichment plan and scope selection |
+| `5019416` | `acaa99c` | 2026-10-31 | Add data enrichment plan and scope selection |
+| `4384fa1` | `f235a1b` | 2026-11-02 | Add Google hours fetcher with graded matching and call safeguards |
+| `804b25e` | `d9e9866` | 2026-11-02 | Add day-1 retrospective to devlog |
+| `b0ad52d` | `863e8f7` | 2026-11-02 | Correct devlog day-1 item 10 and note Google key reissue in item 12 |
+| `db94b59` | `8707574` | 2026-11-02 | Flag confirmed matches whose core name differs for review |
+| `8e235ce` | `3fb4759` | 2026-11-02 | Record name-diff review outcomes; plan map hours disclaimer |
+| `2639a37` | `96443f1` | 2026-11-02 | Fill is_24h, late_night and closes_at from Google hours |
+| `ec27b11` | `bf17c6e` | 2026-11-03 | Add criteria-based review approval; keep unconfirmed matches out of places.json |
+| `2476217` | `e99cf53` | 2026-11-03 | Update places.json after review decisions |
+| `0663d56` | `ad2085f` | 2026-11-03 | Pivot to live lookup: stop tracking stored Kakao/Google data |
+| `f3b59bc` | `c0f78b8` | 2026-11-03 | Archive stored-data scripts, generalize devlog hours, plan history cleanup |
+| `66f8f3a` | `b3bbf89` | 2026-11-03 | Clarify devlog: the two shops were checked by comparing maps, not visited |
+
+- **아직 남은 문제**
+  - **원래 작업 폴더 `C:\dev\gangnam-latenight-map`을 정리된 사본으로 바꾸지 못했다.** 폴더 이름 변경이 "다른 프로세스가 사용 중"이라는 오류로 막혔다. 정리된 사본은 `C:\dev\gangnam-rewrite`에 있고 `.env`도 복사해 뒀다. 원래 폴더는 아직 이전 이력(`66f8f3a`)을 가지고 있다.
+  - OneDrive 아래 예전 clone(`...\OneDrive\문서\GitHub\gangnam-latenight-map`)이 남아 있다. `ef581fb`(Update README) 시점에 멈춘 오래된 사본이라 `data/` 파일은 들어 있지 않지만, 이전 해시 이력을 가지고 있다. 지우지 않았다.
+  - 백업(`C:\dev-backup`)에는 두 파일이 들어 있다. 정리 결과를 확인한 뒤 삭제해야 한다.
+  - 공개 기간에 이미 받아 간 복사본, GitHub 쪽 캐시(이전 해시 주소, PR 참조)는 지울 수 없다.
+- **배운 점**
+  - 이력 재작성은 `커밋 수`, `최신 트리 해시`, `메타데이터 전체 비교`를 푸시 전에 기계적으로 비교하면 "다른 것이 바뀌지 않았다"를 확인할 수 있다.
+  - 작업 폴더를 통째로 바꾸는 단계는 그 폴더를 쓰고 있는 프로세스(터미널, 편집기, 세션)를 먼저 닫아야 한다.
+
+---
+
 ## 확인 대기 (값이 확인되면 위 항목에 채운다)
 
 - 아래 #8~#10 관련 항목은 2026-11-03 방향 전환(#11)으로 중단했다.
   - ~~빽다방 전화번호 비교 / 승인하면 심야·24시간이 되는 52건 확인 / 9번 푸드카페김밥천국 / 자동 승인 기준 완화~~
 - [ ] #4·#5·#9 실제 청구 금액 (Google Cloud 콘솔, 호출 합계 약 1,570건)
-- [ ] #11·#12 git 이력의 `places.json`·`scope.json` 지우기: 내일(2026-11-04), plan.md 10-9 순서대로
+- [x] #11·#12 git 이력의 `places.json`·`scope.json` 지우기: 2026-11-03에 plan.md 10-9 순서대로 실행함 (#13)
+- [ ] #13 `C:\dev\gangnam-latenight-map` 폴더를 정리된 사본으로 교체하고, OneDrive 아래 예전 clone과 `C:\dev-backup` 정리
 - [ ] #11 두 서비스 약관 원문 조항·확인 날짜 기록
 - [ ] #11 plan.md 10장(새 구조·비용)을 사용자가 확인
 - [ ] Google Cloud 일일 쿼터 및 예산 알림($1) 설정 여부
