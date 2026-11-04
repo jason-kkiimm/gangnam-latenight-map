@@ -49,6 +49,49 @@ function closingText(p) {
   return "오늘 마감 " + (p.closes_next_day ? "다음날 " : "") + p.closes_at;
 }
 
+// 분 -> "약 45분" / "약 3시간 23분" / "약 2시간". 필터 계산은 분 단위 숫자로 한다.
+function durationText(min) {
+  if (min < 60) return `약 ${min}분`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `약 ${h}시간 ${m}분` : `약 ${h}시간`;
+}
+
+function walkText(p) {
+  return p.walk_min <= 1 ? "도보 1분 이내" : `도보 약 ${p.walk_min}분`;
+}
+
+// 도착 후 남은 시간의 상태: unlimited(24시간) / unknown(시각 모름) / late(도착 전 마감 가능) / ok
+function leftState(p) {
+  if (p.is_24h) return "unlimited";
+  if (p.remaining_min == null) return "unknown";
+  if (p.remaining_min <= 0) return "late";
+  return "ok";
+}
+
+function leftText(p) {
+  switch (leftState(p)) {
+    case "unlimited":
+      return "도착 후 제한 없음";
+    case "unknown":
+      return "도착 후 확인 필요";
+    case "late":
+      return "도착 전 마감 가능";
+    default:
+      return `도착 후 ${durationText(p.remaining_min)} 남음`;
+  }
+}
+
+// 남은 시간 필터. 24시간은 모든 필터에 남고, 확인 필요·도착 전 마감은 "전체"에서만 보인다.
+function passesLeftFilter(p, minLeft) {
+  if (minLeft === 0) return true;
+  const s = leftState(p);
+  if (s === "unlimited") return true;
+  return s === "ok" && p.remaining_min >= minLeft;
+}
+
+const LEFT_LABEL = { 30: "30분", 60: "1시간", 120: "2시간" };
+
 function kakaoUrl(name) {
   // API 호출 없이 주소만 만든다.
   return "https://map.kakao.com/link/search/" + encodeURIComponent(name);
@@ -139,7 +182,10 @@ function render(places, origin, emptyMessage) {
       links.append(a);
     }
 
-    li.append(name, info, links);
+    const left = document.createElement("div");
+    left.textContent = `${walkText(p)} · ${leftText(p)}`;
+
+    li.append(name, info, left, links);
     li.addEventListener("click", () => {
       if (map) map.panTo({ lat: p.lat, lng: p.lng });
     });
@@ -157,26 +203,32 @@ function lockButtons(seconds) {
 function showLast() {
   if (!last) return;
   const lateOnly = $("late-only").checked;
-  const shown = lateOnly ? last.places.filter((p) => p.late_night === true) : last.places;
+  const minLeft = Number($("min-left").value); // 0 = 전체
   const total = last.places.length;
-  render(
-    shown,
-    last.origin,
-    !total
-      ? "반경 1km 안에 지금 영업 중인 곳이 없어요."
-      : '자정을 넘겨 닫는 곳이 없어요. "심야만 보기"를 끄면 지금 영업 중인 곳을 볼 수 있어요.'
-  );
+  const lateList = lateOnly ? last.places.filter((p) => p.late_night === true) : last.places;
+  const shown = lateList.filter((p) => passesLeftFilter(p, minLeft));
+  const leftName = LEFT_LABEL[minLeft];
+
+  let emptyMessage;
+  if (!total) emptyMessage = "반경 1km 안에 지금 영업 중인 곳이 없어요.";
+  else if (!lateList.length)
+    emptyMessage = '자정을 넘겨 닫는 곳이 없어요. "심야만 보기"를 끄면 지금 영업 중인 곳을 볼 수 있어요.';
+  else
+    emptyMessage = `도착 후 ${leftName} 이상 남는 곳이 없어요. 남은 시간을 "전체"로 바꾸면 ${lateList.length}곳이 보여요.`;
+  render(shown, last.origin, emptyMessage);
+
   const kind = TYPE_LABEL[last.type] || "가게"; // 지금 보이는 결과의 종류(음식점/카페)
   if (!total) {
     setStatus(`${last.note} 반경 1km 안에 지금 영업 중인 ${kind}이(가) 없어요.`);
-  } else if (lateOnly) {
+  } else if (!lateOnly && !minLeft) {
+    setStatus(`${last.note} 반경 1km 안 지금 영업 중인 ${kind} ${total}곳, 가까운 순`);
+  } else {
+    const conds = [lateOnly ? "심야(자정을 넘겨 닫는 곳)" : "", minLeft ? `도착 후 ${leftName} 이상 남는 곳` : ""].filter(Boolean);
     setStatus(
       shown.length
-        ? `${last.note} 지금 영업 중인 ${kind} ${total}곳 중 심야(자정을 넘겨 닫는 곳) ${shown.length}곳, 가까운 순`
-        : `${last.note} 지금 영업 중인 ${kind} ${total}곳 중 심야인 곳이 없어요. "심야만 보기"를 끄면 전체가 보여요.`
+        ? `${last.note} 지금 영업 중인 ${kind} ${total}곳 중 ${conds.join(" + ")} ${shown.length}곳, 가까운 순`
+        : `${last.note} 지금 영업 중인 ${kind} ${total}곳 중 조건(${conds.join(" + ")})에 맞는 곳이 없어요.`
     );
-  } else {
-    setStatus(`${last.note} 반경 1km 안 지금 영업 중인 ${kind} ${total}곳, 가까운 순`);
   }
   applyStale();
 }
@@ -191,6 +243,7 @@ function applyStale() {
 }
 
 $("late-only").addEventListener("change", showLast);
+$("min-left").addEventListener("change", showLast); // 이미 받은 결과만 거른다. 서버를 다시 부르지 않는다.
 document.querySelectorAll('input[name="type"]').forEach((r) => r.addEventListener("change", showLast));
 
 async function search(origin, note) {

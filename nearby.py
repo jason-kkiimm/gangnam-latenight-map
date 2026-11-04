@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 KST = timezone(timedelta(hours=9))  # 한국은 서머타임이 없어 고정 오프셋으로 충분하다
 RADIUS_M = 1000
+WALK_M_PER_MIN = 67  # 도보 속도: 분당 67m (직선거리 기준 추정)
 PAGE_SIZE = 20
 SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
 FIELD_MASK = ",".join(
@@ -46,11 +47,12 @@ def _abs_min(point):
 def analyze_hours(opening_hours, now):
     """지금 영업 중인 구간을 찾아 마감 시각과 심야 여부를 계산한다.
 
+    minutes_to_close: 검색 시각부터 마감까지 남은 분. 24시간·시각 모름은 None.
     심야: 자정을 넘겨 닫는다(영업 구간이 다음 요일로 이어지고 마감이 00:00이 아님).
           정각 00:00 마감은 제외한다. 24시간 영업은 심야로 본다.
     영업시간 정보가 없거나 지금 구간을 못 찾으면 값은 None(확인 필요).
     """
-    unknown = {"closes_at": None, "closes_next_day": None, "is_24h": None, "late_night": None}
+    unknown = {"closes_at": None, "closes_next_day": None, "is_24h": None, "late_night": None, "minutes_to_close": None}
     periods = (opening_hours or {}).get("periods") or []
     if not periods:
         return unknown
@@ -63,19 +65,21 @@ def analyze_hours(opening_hours, now):
         if not o:
             continue
         if not c:  # 닫는 시각이 없음 = 24시간 영업
-            return {"closes_at": None, "closes_next_day": False, "is_24h": True, "late_night": True}
+            return {"closes_at": None, "closes_next_day": False, "is_24h": True, "late_night": True, "minutes_to_close": None}
         start, end = _abs_min(o), _abs_min(c)
         if end <= start:
             end += 7 * 1440
         if end - start >= 1440:  # 하루 종일 이어짐 = 24시간
-            return {"closes_at": None, "closes_next_day": False, "is_24h": True, "late_night": True}
+            return {"closes_at": None, "closes_next_day": False, "is_24h": True, "late_night": True, "minutes_to_close": None}
         if start <= now_min < end or start <= now_min + 7 * 1440 < end:
+            cur = now_min if start <= now_min < end else now_min + 7 * 1440  # 주 경계를 넘는 구간 보정
             close_hm = (c.get("hour", 0), c.get("minute", 0))
             return {
                 "closes_at": "%02d:%02d" % close_hm,
                 "closes_next_day": c.get("day", 0) != google_day,
                 "is_24h": False,
                 "late_night": o.get("day", 0) != c.get("day", 0) and close_hm != (0, 0),
+                "minutes_to_close": end - cur,  # 검색 시각부터 마감까지 남은 분(초는 버림)
             }
     return unknown
 
@@ -178,6 +182,9 @@ def shape_results(raw_places, lat, lng, now):
         if dist > RADIUS_M:
             continue
         hours = analyze_hours(p.get("currentOpeningHours"), now)
+        dist_m = round(dist)
+        walk_min = math.ceil(dist_m / WALK_M_PER_MIN)  # 올림
+        left = hours["minutes_to_close"]
         out.append(
             {
                 "id": p.get("id"),
@@ -185,7 +192,9 @@ def shape_results(raw_places, lat, lng, now):
                 "address": p.get("formattedAddress", ""),
                 "lat": loc["latitude"],
                 "lng": loc["longitude"],
-                "distance_m": round(dist),
+                "distance_m": dist_m,
+                "walk_min": walk_min,
+                "remaining_min": None if left is None else left - walk_min,  # 도착 후 남는 분(0 이하면 도착 전 마감)
                 "google_maps_url": p.get("googleMapsUri", ""),
                 **hours,
             }

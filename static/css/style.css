@@ -42,6 +42,12 @@ button:disabled {
   color: #444;
 }
 
+.note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #666;
+}
+
 main {
   flex: 1;
   min-height: 0;
