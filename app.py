@@ -13,7 +13,7 @@ from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 import nearby
 
-BASE_DIR = Path(__file__).parent
+BASE_DIR = Path(__file__).resolve().parent  # 실행 위치가 아니라 app.py가 있는 폴더 기준
 load_dotenv(BASE_DIR / ".env")
 
 DAILY_LIMIT = 30  # 서버 전체 하루 구글 호출 상한 (plan.md 10-3)
