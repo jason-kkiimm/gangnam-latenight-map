@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 import nearby
 
@@ -114,6 +114,12 @@ def index():
         station={"lat": nearby.GANGNAM_STATION[0], "lng": nearby.GANGNAM_STATION[1]},
         cooldown=COOLDOWN_SEC,
     )
+
+
+@app.route("/favicon.ico")
+def favicon():
+    # 브라우저가 기본으로 찾는 주소. SVG 아이콘으로 넘긴다.
+    return redirect(url_for("static", filename="favicon.svg"), code=302)
 
 
 @app.route("/api/nearby")
