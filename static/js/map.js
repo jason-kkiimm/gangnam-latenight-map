@@ -13,6 +13,13 @@ function initMap() {
     center: station,
     zoom: 16,
     mapTypeControl: false,
+    // 기본 가게·상업시설(POI) 아이콘만 숨겨 우리 마커가 눈에 띄게 한다.
+    // 교통(지하철역 등)과 도로 이름은 건드리지 않는다. 구글 로고·저작권 표시는 스타일로 가려지지 않으며, 가리면 안 된다.
+    // mapId를 쓰면 이 styles 설정은 무시된다(클라우드 스타일링을 써야 함). 지금은 mapId 없음.
+    styles: [
+      { featureType: "poi.business", stylers: [{ visibility: "off" }] },
+      { featureType: "poi", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+    ],
   });
   infoWindow = new google.maps.InfoWindow();
 }
