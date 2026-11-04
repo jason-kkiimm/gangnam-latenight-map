@@ -61,7 +61,7 @@ function walkText(p) {
   return p.walk_min <= 1 ? "도보 1분 이내" : `도보 약 ${p.walk_min}분`;
 }
 
-// 도착 후 남은 시간의 상태: unlimited(24시간) / unknown(시각 모름) / late(도착 전 마감 가능) / ok
+// 도착 시 남은 영업시간의 상태: unlimited(24시간) / unknown(시각 모름) / late(도착 전 마감 가능) / ok
 function leftState(p) {
   if (p.is_24h) return "unlimited";
   if (p.remaining_min == null) return "unknown";
@@ -72,13 +72,13 @@ function leftState(p) {
 function leftText(p) {
   switch (leftState(p)) {
     case "unlimited":
-      return "도착 후 제한 없음";
+      return "24시간 영업";
     case "unknown":
-      return "도착 후 확인 필요";
+      return "도착 시 영업 확인 필요";
     case "late":
       return "도착 전 마감 가능";
     default:
-      return `도착 후 ${durationText(p.remaining_min)} 남음`;
+      return `도착 시 ${durationText(p.remaining_min)} 남음`;
   }
 }
 
@@ -214,7 +214,7 @@ function showLast() {
   else if (!lateList.length)
     emptyMessage = '자정을 넘겨 닫는 곳이 없어요. "심야만 보기"를 끄면 지금 영업 중인 곳을 볼 수 있어요.';
   else
-    emptyMessage = `도착 후 ${leftName} 이상 남는 곳이 없어요. 남은 시간을 "전체"로 바꾸면 ${lateList.length}곳이 보여요.`;
+    emptyMessage = `도착 시 ${leftName} 이상 남는 곳이 없어요. "도착 시 남은 영업시간"을 "전체"로 바꾸면 ${lateList.length}곳이 보여요.`;
   render(shown, last.origin, emptyMessage);
 
   const kind = TYPE_LABEL[last.type] || "가게"; // 지금 보이는 결과의 종류(음식점/카페)
@@ -223,7 +223,7 @@ function showLast() {
   } else if (!lateOnly && !minLeft) {
     setStatus(`${last.note} 반경 1km 안 지금 영업 중인 ${kind} ${total}곳, 가까운 순`);
   } else {
-    const conds = [lateOnly ? "심야(자정을 넘겨 닫는 곳)" : "", minLeft ? `도착 후 ${leftName} 이상 남는 곳` : ""].filter(Boolean);
+    const conds = [lateOnly ? "심야(자정을 넘겨 닫는 곳)" : "", minLeft ? `도착 시 ${leftName} 이상 남는 곳` : ""].filter(Boolean);
     setStatus(
       shown.length
         ? `${last.note} 지금 영업 중인 ${kind} ${total}곳 중 ${conds.join(" + ")} ${shown.length}곳, 가까운 순`
