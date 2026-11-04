@@ -165,7 +165,8 @@ function render(places, origin, emptyMessage) {
     }
 
     const info = document.createElement("div");
-    info.textContent = `${p.distance_m}m · ${closingText(p)}`;
+    // 24시간 가게는 아랫줄(도보 · 24시간 영업)에 이미 나오므로 윗줄에는 거리만 쓴다.
+    info.textContent = p.is_24h ? `${p.distance_m}m` : `${p.distance_m}m · ${closingText(p)}`;
 
     const links = document.createElement("div");
     for (const [label, href] of [
