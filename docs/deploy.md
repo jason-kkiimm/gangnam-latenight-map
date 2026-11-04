@@ -7,7 +7,7 @@
 
 - 무료 계정은 주소가 `https://내아이디.pythonanywhere.com` 하나이고, 웹앱도 1개만 만들 수 있다.
 - 처음에는 반드시 `PLACES_MODE=fake`로 올려서 화면이 뜨는지만 본다. 구글 호출(real)은 그다음에, 승인한 뒤에만 켠다.
-- 무료 계정은 **밖으로 나가는 인터넷이 허용 목록(화이트리스트) 사이트로만 제한**된다. PythonAnywhere 공식 허용 목록에 `.googleapis.com`이 있는 것을 확인했다(2026-11-04). 구글 Places 주소(`places.googleapis.com`)도 여기에 들어가므로 real 모드를 쓸 수 있을 것으로 보지만, 실제 호출은 아직 해 보지 않았다.
+- 무료 계정은 **밖으로 나가는 인터넷이 허용 목록(화이트리스트) 사이트로만 제한**된다. PythonAnywhere 공식 허용 목록에 `.googleapis.com`이 있는 것을 확인했다(2026-11-04). 구글 Places 주소(`places.googleapis.com`)도 여기에 들어가므로 real 모드를 쓸 수 있을 것으로 보지만, 실제 호출은 2026-11-05에 해 보았고 동작했다(devlog #25).
 - **한 달마다 사이트를 연장해야 한다.** Web 탭의 **Run until 1 month from today** 버튼을 누른다. 안 누르면 웹앱이 멈춘다. 첫 만료일은 **2026-12-04**이고, 누를 때마다 오늘부터 한 달로 늘어난다.
 
 ## 1. 코드 내려받기 (git clone)
@@ -113,7 +113,7 @@ git pull
 ## 8. real 모드로 바꾸기 전 체크 (사용자 승인 후)
 
 - [x] 허용 목록에 `.googleapis.com` 있음 확인 (0번 참고, 2026-11-04)
-- [ ] `.env`에 `GOOGLE_PLACES_KEY` 추가(브라우저 키는 이미 있음), `PLACES_MODE=real`
-- [ ] 구글 브라우저 키 제한에 `내아이디.pythonanywhere.com` 추가
-- [ ] 하루 호출 상한(`DAILY_LIMIT = 30`)과 예산 알림 확인
-- [ ] Reload 후 호출 1건으로 시험
+- [x] `.env`에 `GOOGLE_PLACES_KEY` 추가(브라우저 키는 이미 있음), `PLACES_MODE=real` (사용자 확인, 2026-11-05)
+- [x] 구글 브라우저 키 제한에 `내아이디.pythonanywhere.com` 추가 (devlog #23에 기록, 배포 사이트에서 지도 뜸 확인, 사용자 확인 2026-11-05)
+- [x] 하루 호출 상한(`DAILY_LIMIT = 30`)과 예산 알림 확인 (서버 키는 Places API (New)로 제한, 월 ₩1,000 알림, 사용자 확인 2026-11-05)
+- [x] Reload 후 호출로 시험: 실제 결과와 심야 표시 확인. 단 호출 수가 계획 1건이 아니라 2건이었고 이유는 확인하지 못함 (devlog #25)
