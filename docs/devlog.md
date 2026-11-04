@@ -664,8 +664,7 @@
 
 ### 사용자가 정한 것
 - 안 쓰는 카카오 키 2개(`KAKAO_JS_KEY`, `KAKAO_REST_KEY`)를 `.env`에서 지우기로 **승인**했다.
-- 카카오 개발자 사이트의 **REST 키 재발급은 사용자가 직접 한다.** 한 번 노출됐던 키라서다.
-- 카카오 **앱 자체는 지우지 않는다.** 마감 후 교차 확인에 쓸 수 있어서다.
+- 11/3 캡처에 노출됐던 카카오 REST 키는 사용자가 카카오 개발자 사이트에서 새 키를 만들어 대표로 바꾸고 예전 키를 삭제했다(11/4 20:27). 앱은 마감 후 교차 확인용으로 남겨둠.
 
 ### AI(Claude Code)가 한 것
 - **키 사용처 조사**: `app.py`, `nearby.py`, `static/js/map.js`, `templates/index.html`에서 4개 키 이름을 찾았다. `archive/` 밖에서는 카카오 키를 읽는 곳이 없었다. 쓰이는 키는 `GOOGLE_PLACES_KEY`(`app.py`, 서버가 구글에 조회할 때)와 `GOOGLE_MAPS_BROWSER_KEY`(`app.py`, 브라우저 지도용) 두 개뿐이다. `KAKAO_REST_KEY`는 `archive/collect_places.py`에서만 썼고, `KAKAO_JS_KEY`는 어디서도 안 썼다.
@@ -678,7 +677,7 @@
 
 ### 결과와 남은 일
 - 코드는 바꾸지 않았다. `py_compile` 통과, `git status` 깨끗.
-- [ ] 카카오 REST 키 재발급 (사용자가 직접)
+- [x] 카카오 REST 키 재발급: 사용자가 직접 완료 (11/4 20:27)
 
 ---
 
