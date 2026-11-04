@@ -158,5 +158,10 @@ def api_nearby():
     return jsonify({"mode": mode, "count": len(places), "places": places})
 
 
+def debug_enabled():
+    """개발 모드는 FLASK_DEBUG가 1/true/yes/on일 때만 켠다. 없으면 꺼짐."""
+    return (os.getenv("FLASK_DEBUG") or "").strip().lower() in ("1", "true", "yes", "on")
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=debug_enabled())
