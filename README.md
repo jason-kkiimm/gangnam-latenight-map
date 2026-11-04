@@ -1,5 +1,7 @@
 # gangnam-latenight-map
 
+배포 주소: https://gangnamlatenight.pythonanywhere.com (가짜 모드)
+
 강남역 근처에서 **지금 영업 중인 음식점·카페**를 가까운 순으로 보여주고, 오늘 마감 시각과 심야(자정을 넘겨 닫는 곳) 여부를 알려주는 웹 서비스입니다. 구글 Places API (New)를 실시간으로 조회하며 가게 정보는 저장하지 않습니다. 설계는 `docs/plan.md` 10장을 봅니다.
 
 ## 실행 방법

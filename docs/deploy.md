@@ -7,8 +7,8 @@
 
 - 무료 계정은 주소가 `https://내아이디.pythonanywhere.com` 하나이고, 웹앱도 1개만 만들 수 있다.
 - 처음에는 반드시 `PLACES_MODE=fake`로 올려서 화면이 뜨는지만 본다. 구글 호출(real)은 그다음에, 승인한 뒤에만 켠다.
-- 무료 계정은 **밖으로 나가는 인터넷이 허용 목록(화이트리스트) 사이트로만 제한**된다. 구글 Places 주소(`places.googleapis.com`)가 허용되는지는 **아직 확인하지 못했다.** real 모드로 바꾸기 전에 PythonAnywhere 도움말의 허용 목록을 확인하자. (fake 모드는 인터넷 호출이 없어서 상관없다.)
-- 3개월 동안 사이트를 안 열어 보면 무료 웹앱이 멈출 수 있다. Web 탭의 연장 버튼을 눌러 준다.
+- 무료 계정은 **밖으로 나가는 인터넷이 허용 목록(화이트리스트) 사이트로만 제한**된다. PythonAnywhere 공식 허용 목록에 `.googleapis.com`이 있는 것을 확인했다(2026-11-04). 구글 Places 주소(`places.googleapis.com`)도 여기에 들어가므로 real 모드를 쓸 수 있을 것으로 보지만, 실제 호출은 아직 해 보지 않았다.
+- **한 달마다 사이트를 연장해야 한다.** Web 탭의 **Run until 1 month from today** 버튼을 누른다. 안 누르면 웹앱이 멈춘다. 첫 만료일은 **2026-12-04**이고, 누를 때마다 오늘부터 한 달로 늘어난다.
 
 ## 1. 코드 내려받기 (git clone)
 
@@ -43,16 +43,15 @@ cd ~/gangnam-latenight-map
 nano .env
 ```
 
-처음에는 이것만 적는다 (값은 따로 적지 않는다):
+처음에는 이 두 줄의 **이름**을 적는다 (값은 문서에 적지 않는다):
 
 ```
 PLACES_MODE=fake
+GOOGLE_MAPS_BROWSER_KEY=(브라우저 키 값)
 ```
 
-나중에 real 모드를 쓸 때 필요한 키 **이름**:
-
-- `GOOGLE_PLACES_KEY` — 서버 키(구글 Places). 브라우저로 보내지 않는다.
-- `GOOGLE_MAPS_BROWSER_KEY` — 브라우저 지도용 키. 구글 콘솔에서 사이트 주소 제한에 `내아이디.pythonanywhere.com`을 **추가**해야 지도가 뜬다.
+- `GOOGLE_MAPS_BROWSER_KEY` — **가짜 모드에서도 지도를 그리려면 필요하다.** 지도는 브라우저가 구글에서 받아 오기 때문이다. 구글 콘솔에서 이 키의 사이트 주소 제한에 `내아이디.pythonanywhere.com`을 **추가**해야 지도가 뜬다.
+- `GOOGLE_PLACES_KEY` — 서버 키(구글 Places). **real 모드로 바꿀 때만** 넣는다. 브라우저로 보내지 않는다.
 
 `FLASK_DEBUG`는 서버에 넣지 않는다(꺼짐이 기본). 저장은 nano에서 `Ctrl+O` → Enter → `Ctrl+X`.
 
@@ -90,7 +89,7 @@ if path not in sys.path:
 from app import app as application  # noqa
 ```
 
-`내아이디`를 실제 아이디로 바꾸고 **Save**. 우리 앱은 `app.py` 안의 `app`이라서 `application`이라는 이름으로 가져온다.
+`내아이디`를 실제 아이디로 바꾸고 **Save**. **붙여넣은 뒤 줄 앞에 공백이 붙지 않았는지 꼭 확인한다**(줄 앞 공백이 있으면 `IndentationError`가 난다. 모든 줄이 맨 왼쪽에서 시작해야 한다). 우리 앱은 `app.py` 안의 `app`이라서 `application`이라는 이름으로 가져온다.
 
 `.env`와 `usage_counter.json`은 `app.py`가 있는 폴더를 기준으로 찾기 때문에, WSGI에서 따로 경로를 알려 줄 필요가 없다.
 
@@ -113,8 +112,8 @@ git pull
 
 ## 8. real 모드로 바꾸기 전 체크 (사용자 승인 후)
 
-- [ ] 허용 목록에 구글 Places 주소가 있는지 확인 (0번 참고)
-- [ ] `.env`에 `GOOGLE_PLACES_KEY`, `GOOGLE_MAPS_BROWSER_KEY` 입력, `PLACES_MODE=real`
+- [x] 허용 목록에 `.googleapis.com` 있음 확인 (0번 참고, 2026-11-04)
+- [ ] `.env`에 `GOOGLE_PLACES_KEY` 추가(브라우저 키는 이미 있음), `PLACES_MODE=real`
 - [ ] 구글 브라우저 키 제한에 `내아이디.pythonanywhere.com` 추가
 - [ ] 하루 호출 상한(`DAILY_LIMIT = 30`)과 예산 알림 확인
 - [ ] Reload 후 호출 1건으로 시험
