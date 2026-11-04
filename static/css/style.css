@@ -70,6 +70,22 @@ main {
   border-left: 1px solid #ddd;
 }
 
+/* 종류(음식점/카페)를 바꿨는데 아직 다시 찾지 않았을 때: 옛 결과를 흐리게 보여준다. */
+#list.stale li:not(.empty) {
+  opacity: 0.4;
+}
+
+/* 0곳일 때 이유 안내. 흐려진 상태에서도 또렷하게 보이고, 눌러도 아무 일 없다. */
+#list li.empty {
+  cursor: default;
+  font-size: 14px;
+  color: #444;
+}
+
+#list li.empty:hover {
+  background: none;
+}
+
 #list li {
   padding: 10px 14px;
   border-bottom: 1px solid #eee;
