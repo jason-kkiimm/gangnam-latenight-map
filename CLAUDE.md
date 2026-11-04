@@ -30,3 +30,10 @@
 
 - 작업이 끝나면 `docs/devlog.md`에 항목을 추가한다. 사용자가 내린 결정과 AI가 한 일을 구분해서 적고, 키 값은 적지 않는다.
 - 커밋 후에는 `git status`로 깃허브와 같은지 보여준다.
+
+## 보호 장치와 직접 실행 skill
+
+- **hook (`.claude/hooks/protect-env.js`)**: Claude Code가 `.env`를 읽기·수정·쓰기 하거나 명령어로 다루면 차단하고 이유를 한국어로 보여 준다. `.env.example`은 허용한다. 설정은 `.claude/settings.json`. (Node.js 필요)
+- **`/check`**: 위 확인 3종을 실행하고 표로 보여 준다.
+- **`/deploy-guide`**: 커밋 번호를 확인하고 PythonAnywhere 입력 명령어(`git pull`)·Reload·화면 확인 순서를 안내한다. 직접 배포하지 않는다.
+- 두 skill은 사용자가 `/check`, `/deploy-guide`를 입력했을 때만 실행된다.

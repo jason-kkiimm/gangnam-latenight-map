@@ -981,6 +981,32 @@
 
 ---
 
+## 2026-11-05 #31. Claude Code 설정 추가: .env 보호 hook, /check, /deploy-guide (API 호출 0건)
+
+### 사용자가 내린 결정
+- Claude Code가 `.env`를 읽기·수정·쓰기·명령어로 다루면 차단하는 hook을 만든다. `.env.example`은 허용한다.
+- 직접 실행하는 skill 두 개(`/check`, `/deploy-guide`)를 추가한다. 둘 다 사용자가 입력했을 때만 실행한다.
+- 앱 코드는 바꾸지 않고, 구글·카카오 API는 호출하지 않고, 진짜 `.env`로는 시험하지 않는다.
+
+### AI(Claude Code)가 한 것
+- `.claude/hooks/protect-env.js`(Node.js, Windows 동작) 작성. 파일 경로가 `.env`/`.env.*`이거나 명령어(Bash·PowerShell)·Grep·Glob 패턴에 `.env`가 있으면 한국어 이유와 함께 차단한다. `.env.example`, `.venv`, `python-dotenv`는 걸리지 않는다. 입력을 읽지 못하면 안전하게 차단한다.
+- `.claude/settings.json`에 PreToolUse hook 등록.
+- `.claude/skills/check/SKILL.md`, `.claude/skills/deploy-guide/SKILL.md` 작성 (`disable-model-invocation: true`).
+- `CLAUDE.md`에 hook과 skill을 짧게 적었다.
+
+### 시험 결과 (가짜 입력, 진짜 `.env`는 건드리지 않음)
+- 차단: Read·Edit `.env`, Write `.env.local`, `cat`·`source`·`Get-Content`로 `.env`, Grep 경로 `.env`, 깨진 입력.
+- 허용: Read·Edit `.env.example`, `cat .env.example`, README.md, `.venv` 파이썬 실행, `pip show python-dotenv`.
+- 시험 중 hook이 이미 켜져서 `.env` 글자가 들어간 내 명령 두 개를 실제로 막았다(차단 동작 확인).
+
+### 알아둘 점
+- 명령어 검사는 글자 모양으로 하므로 이름을 쪼개서 만드는 우회는 못 막는다. 실수 방지용 장치이지 완전한 보안 장치는 아니다.
+- 명령어에 `.env` 글자가 들어가면 안전한 용도(문서 내용 쓰기 등)도 막힌다. 그럴 때는 Edit/Write 도구로 파일을 고친다.
+- `/check`, `/deploy-guide`는 아직 실제로 실행해 보지 않았다.
+- (정정) 처음에 "저장소에 `.env.example`이 없다"고 적었으나 틀렸다. 이미 저장소에 있다(사용자 확인, 커밋 `34a9155`). 원인은 AI가 숨김 파일을 보여 주지 않는 `ls`(옵션 없음) 결과만 보고 판단한 것이다. 이후 `ls -a`, `git ls-files .env.example`, Read 도구로 존재와 허용을 확인했다.
+
+---
+
 ## 확인 대기 (값이 확인되면 위 항목에 채운다)
 
 - 아래 #8~#10 관련 항목은 2026-11-03 방향 전환(#11)으로 중단했다.
