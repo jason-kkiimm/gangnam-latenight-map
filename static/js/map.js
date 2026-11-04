@@ -199,8 +199,13 @@ async function search(origin, note) {
   setStatus("조회 중…");
   const type = selectedType(); // 보낸 종류를 기억해 둔다. 조회 중에 라디오를 바꿔도 결과의 종류가 틀어지지 않게.
   try {
-    const q = new URLSearchParams({ lat: origin.lat, lng: origin.lng, type });
-    const res = await fetch("/api/nearby?" + q);
+    // 좌표는 주소가 아니라 POST 본문으로 보내고, 약 100m 단위(소수점 셋째 자리)로 줄인다.
+    const round3 = (x) => Math.round(x * 1000) / 1000;
+    const res = await fetch("/api/nearby", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat: round3(origin.lat), lng: round3(origin.lng), type }),
+    });
     const data = await res.json();
     if (!res.ok) {
       setStatus(data.error || "조회에 실패했어요.");

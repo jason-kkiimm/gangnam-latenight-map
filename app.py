@@ -122,18 +122,34 @@ def favicon():
     return redirect(url_for("static", filename="favicon.svg"), code=302)
 
 
-@app.route("/api/nearby")
+def _is_number(value):
+    """JSON 숫자(int/float)만 true. true/false, null, 문자열은 숫자로 보지 않는다."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def round_coord(value):
+    """좌표를 소수점 셋째 자리(약 100m 단위)로 줄인다."""
+    return round(float(value), 3)
+
+
+@app.route("/api/nearby", methods=["POST"])
 def api_nearby():
-    place_type = request.args.get("type", "")
-    try:
-        lat = float(request.args["lat"])
-        lng = float(request.args["lng"])
-    except (KeyError, ValueError):
+    # 좌표는 주소(URL)가 아니라 POST 본문에 담겨 와서 접속 기록에 남지 않는다.
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        body = {}
+    place_type = body.get("type", "")
+    if not (_is_number(body.get("lat")) and _is_number(body.get("lng"))):
         return _error("lat, lng 값이 필요합니다.", 400)
+    try:
+        lat, lng = float(body["lat"]), float(body["lng"])
+    except OverflowError:  # 아주 큰 정수
+        return _error("좌표 범위가 올바르지 않습니다.", 400)
     if not (-90 <= lat <= 90 and -180 <= lng <= 180) or lat != lat or lng != lng:
         return _error("좌표 범위가 올바르지 않습니다.", 400)
-    if place_type not in nearby.TYPES:
+    if not isinstance(place_type, str) or place_type not in nearby.TYPES:
         return _error("type은 restaurant 또는 cafe여야 합니다.", 400)
+    lat, lng = round_coord(lat), round_coord(lng)  # 검사 뒤, 서버에서도 한 번 더 줄인다
 
     wait = _cooldown_left(request.remote_addr)
     if wait > 0:
