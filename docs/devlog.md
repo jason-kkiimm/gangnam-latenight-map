@@ -1005,6 +1005,29 @@
 - `/check`, `/deploy-guide`는 아직 실제로 실행해 보지 않았다.
 - (정정) 처음에 "저장소에 `.env.example`이 없다"고 적었으나 틀렸다. 이미 저장소에 있다(사용자 확인, 커밋 `34a9155`). 원인은 AI가 숨김 파일을 보여 주지 않는 `ls`(옵션 없음) 결과만 보고 판단한 것이다. 이후 `ls -a`, `git ls-files .env.example`, Read 도구로 존재와 허용을 확인했다.
 
+## 2026-11-07 #32. 맥 작업 환경 확인 (API 호출 0건)
+
+### 사용자가 내린 결정
+- 맥에서 `/check`를 실행하고, `protect-env.js` hook이 이 맥에서 동작하는지 가짜 입력으로 시험하라고 했다. 진짜 `.env`는 읽지 말 것, 커밋은 먼저 물을 것.
+
+### AI(Claude Code)가 한 것
+- `/check` 실행 (가짜 모드, 임시 포트 5077, 끝나고 서버 종료):
+  - 문법 검사 통과. 이 맥에는 `python` 명령이 없어 `python3`로 실행했다. 서버는 `.venv/bin/python`으로 켰다.
+  - `/api/nearby` POST: restaurant 200·2곳, cafe 200·3곳 (둘 다 기대와 같음).
+  - `git status`: 바뀐 파일 없음.
+- hook 시험: node(v26.13.0)로 `protect-env.js`에 가짜 JSON을 직접 넣었다. 진짜 `.env`는 읽지도 만들지도 않았다.
+
+| 입력 | 기대 | 결과 |
+|---|---|---|
+| Read `.env` | 차단 | 차단 |
+| Read `.env.example` | 허용 | 허용 |
+| Bash `cat .env` | 차단 | 차단 |
+| Bash `cat .env.example` | 허용 | 허용 |
+
+### 알아둘 점
+- hook은 맥에서도 정상 동작한다. 시험 스크립트는 프로젝트 밖(임시 폴더)에 두었다.
+- 맥에서는 `python`이 아니라 `python3` / `.venv/bin/python`을 써야 한다.
+
 ---
 
 ## 확인 대기 (값이 확인되면 위 항목에 채운다)
