@@ -1030,6 +1030,33 @@
 
 ---
 
+## 2026-11-07 #33. 맥 세팅 마무리: Node 재확인, GitHub 로그인(gh), 맥에서 첫 푸시 (API 호출 0건)
+
+### 사용자가 내린 결정
+- 맥에서 이어 작업하기로 하고 macOS를 Golden Gate 27.2로 업데이트했다.
+- 맥에 GitHub CLI(`gh`)를 공식 설치 파일로 깔고, 웹 브라우저 방식으로 로그인했다.
+- 피드백은 구글 설문으로 받기 시작했고, 지금까지 2명이 답했다.
+
+### 사용자가 한 것 (AI는 단계 안내와 확인)
+- Node: 업데이트 전에는 `node -v`가 "macOS 13.5 이상용으로 빌드됨" 오류(`dyld … Symbol not found`)로 멈췄다. 업데이트 후 같은 명령에서 `v26.13.0`이 나왔다.
+- Claude Code를 홈 폴더(`~`)가 아니라 프로젝트 폴더에서 다시 켰다 (`cd ~/projects/gangnam-latenight-map && claude`). 처음 열 때 폴더 신뢰 질문에 "Yes, I trust this folder"를 골랐다.
+- #32 커밋의 첫 푸시는 이 맥에 GitHub 로그인 정보가 없어 `could not read Username` 오류로 실패했다.
+- 맥에 `gh`도 `brew`도 없었다. https://github.com/cli/cli/releases/latest 에서 `gh_2.103.3_macOS_universal.pkg`를 받았다. 서명 없는 설치 파일이라 맥이 열기를 막았고, 시스템 설정 → 개인정보 보호 및 보안 → '그래도 열기'로 설치했다.
+- 터미널에서 `exec zsh` 후 `gh --version` → 2.103.3. `gh auth login` (GitHub.com / 웹 브라우저 / HTTPS / Git 인증 Yes) → `Logged in as jason-kkiimm`.
+- `git push` → `e578594..23d0b26 main -> main`. `git status` → `up to date with 'origin/main'`.
+
+### AI가 확인한 것
+- GitHub에서 저장소를 따로 받아 최신 커밋이 `23d0b26 Docs: devlog #32 (Mac environment check)`인지 확인했다.
+
+### 알아둘 점
+- 브라우저 인증 화면에는 터미널에 뜨는 8자리 코드(가운데 `-`)를 넣는다. 문자·메일로 오는 6자리 숫자가 아니다.
+- 서명 없는 설치 파일은 처음 한 번 '그래도 열기'가 필요하다.
+- 맥의 AirPlay 수신(ControlCenter)도 5000번 포트를 쓰고 있다. 로컬 서버를 5000번으로 열 때 문제가 생기면 이것부터 확인한다.
+- 이 맥 응용 프로그램 폴더에 Claude·Chrome·Obsidian이 두 개씩(`… 2.app`) 있다. 아직 정리하지 않았다.
+- 피드백 2명의 응답 내용은 아직 이 기록에 넣지 않았다.
+
+---
+
 ## 확인 대기 (값이 확인되면 위 항목에 채운다)
 
 - 아래 #8~#10 관련 항목은 2026-11-03 방향 전환(#11)으로 중단했다.
